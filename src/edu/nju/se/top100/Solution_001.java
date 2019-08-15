@@ -1,4 +1,4 @@
-package edu.nju.se.num1_10;
+package edu.nju.se.top100;
 
 /**
  * 两数之和
@@ -6,7 +6,7 @@ package edu.nju.se.num1_10;
  * @author zongk
  *
  */
-public class Solution_01 {
+public class Solution_001 {
 
 	public int[] twoSum(int[] nums, int target) {
         int[] outcome = new int[2];

@@ -1,4 +1,4 @@
-package edu.nju.se.num1_10;
+package edu.nju.se.top100;
 
 import java.util.ArrayList;
 
@@ -8,7 +8,7 @@ import java.util.ArrayList;
  * @author zongk
  *
  */
-public class Solution_02 {
+public class Solution_002 {
 
 	public ListNode addTwoNumbers(ListNode l1, ListNode l2) {
 		
@@ -103,7 +103,7 @@ public class Solution_02 {
 	 }
 	 
 	 public static void main(String[] args) {
-		new Solution_02().test();
+		new Solution_002().test();
 	}
 
 	private void test() {

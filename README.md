@@ -1,2 +1,2 @@
 # LeetCode
-https://leetcode-cn.com/problemset/all/
+https://leetcode-cn.com/problemset/hot-100/
