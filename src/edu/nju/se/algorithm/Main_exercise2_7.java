@@ -16,10 +16,10 @@ class Main_exercise2_7 {
 
 			String[] arrNormal = ss.split(" ");
 
-			int[] arr = new int[arrNormal.length];
+			int[] arr = new int[arrNormal.length - 1];
 
-			for (int j = 0; j < arrNormal.length; j++) {
-				arr[j] = Integer.parseInt(arrNormal[j]);
+			for (int j = 1; j < arrNormal.length; j++) {
+				arr[j - 1] = Integer.parseInt(arrNormal[j]);
 			}
 
 			quickSort(arr);
