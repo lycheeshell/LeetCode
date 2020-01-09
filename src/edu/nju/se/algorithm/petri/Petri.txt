@@ -1,0 +1,624 @@
+package com.edu.nju.se.petri;
+
+import org.jdom2.Document;
+import org.jdom2.Element;
+import org.jdom2.input.SAXBuilder;
+
+import java.io.*;
+import java.util.*;
+
+/**
+ * @Author ：lycheeshell
+ * @Date ：Created in 13:37 2019/11/9
+ */
+public class Petri {
+
+    class Net {
+
+        private List<Node> nodes;
+        private List<Arc> arcs;
+
+        public Net(List<Node> nodes, List<Arc> arcs) {
+            this.nodes = nodes;
+            this.arcs = arcs;
+        }
+
+        public List<Node> getNodes() {
+            return nodes;
+        }
+
+        public void setNodes(List<Node> nodes) {
+            this.nodes = nodes;
+        }
+
+        public List<Arc> getArcs() {
+            return arcs;
+        }
+
+        public void setArcs(List<Arc> arcs) {
+            this.arcs = arcs;
+        }
+    }
+
+    class Arc {
+
+        private String id;
+        private Node source;
+        private Node target;
+
+        public Arc(String id, Node source, Node target) {
+            this.id = id;
+            this.source = source;
+            this.target = target;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public Node getSource() {
+            return source;
+        }
+
+        public void setSource(Node source) {
+            this.source = source;
+        }
+
+        public Node getTarget() {
+            return target;
+        }
+
+        public void setTarget(Node target) {
+            this.target = target;
+        }
+    }
+
+    class Node {
+
+        private String id;
+        private String name;
+        private List<Node> next;
+        private List<Node> prev;
+        private int visitNum;
+        private boolean tokened;
+
+        public Node(String id, String name) {
+            this.id = id;
+            this.name = name;
+            this.next = new ArrayList<Node>();
+            this.prev = new ArrayList<Node>();
+            this.visitNum = 0;
+            this.tokened = false;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public void setId(String id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public int getVisitNum() {
+            return visitNum;
+        }
+
+        public void setVisitNum(int visitNum) {
+            this.visitNum = visitNum;
+        }
+
+        public void addNext(Node n) {
+            this.next.add(n);
+        }
+
+        public List<Node> getNext() {
+            return this.next;
+        }
+
+        public void addPrev(Node n) {
+            this.prev.add(n);
+        }
+
+        public List<Node> getPrev() {
+            return this.prev;
+        }
+
+        public boolean isTokened() {
+            return tokened;
+        }
+
+        public void setTokened(boolean tokened) {
+            this.tokened = tokened;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Node node = (Node) o;
+            return Objects.equals(id, node.id) &&
+                    Objects.equals(name, node.name);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, name);
+        }
+    }
+
+    class Place extends Node {
+        public Place(String id, String name) {
+            super(id, name);
+        }
+    }
+
+    class Transition extends Node {
+        public Transition(String id, String name) {
+            super(id, name);
+        }
+    }
+
+    class Graph {
+        private Node first;
+        private List<List<Transition>> result;
+        private List<Transition> circleNode;
+
+        public Graph(Node start) {
+            this.first = start;
+            if (start != null) {
+                this.first.setTokened(true);
+            }
+            this.result = new ArrayList<>();
+            this.circleNode = findCircleBranchTransition(this.first);
+        }
+
+        private List<Transition> findCircleBranchTransition(Node first) {
+            List<Transition> result = new ArrayList<>();
+
+            if (first == null) {
+                return result;
+            }
+
+            List<List<Node>> allPath = new ArrayList<>();
+            first.setVisitNum(first.getVisitNum() + 1);
+            findAllNodePath(first, new ArrayList<>(), allPath);
+            first.setVisitNum(first.getVisitNum() - 1);
+
+            for (List<Node> path : allPath) {
+                for (int i = 0; i < path.size(); i++) {
+                    Node node = path.get(i);
+                    if (node instanceof Place && path.lastIndexOf(node) != i) {
+                        int loca = path.lastIndexOf(node);
+                        for (int k = i + 1; k < loca; k++) {
+                            Node temp = path.get(k);
+                            if (temp instanceof Transition) {
+                                int num = 0;
+                                for (int p = 0; p < path.size(); p++) {
+                                    if (path.get(p).equals(temp)) {
+                                        num++;
+                                    }
+                                }
+                                if (num == 1) {
+                                    if (!result.contains((Transition) temp)) {
+                                        result.add((Transition) temp);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        private void findAllNodePath(Node now, List<Node> existPath, List<List<Node>> allPath) {
+            if (now.getVisitNum() >= 2) {
+                return;
+            }
+            if (now.getNext().size() == 0) {
+                existPath.add(now);
+                allPath.add(existPath);
+                return;
+            }
+            for (Node n : now.getNext()) {
+                List<Node> newPath = new ArrayList<>();
+                newPath.addAll(existPath);
+                newPath.add(now);
+                now.setVisitNum(now.getVisitNum() + 1);
+                findAllNodePath(n, newPath, allPath);
+                now.setVisitNum(now.getVisitNum() - 1);
+            }
+        }
+
+        public List<List<Transition>> getAllPath() {
+            if (result.size() > 0 || first == null || first.getNext().size() == 0) {
+                return result;
+            }
+            first.setTokened(true);
+            for (Node t : first.getNext()) {
+                List<Transition> path = new ArrayList<>();
+                List<Transition> active = new ArrayList<>();
+                List<Transition> inactive = new ArrayList<>();
+                if (checkReady(t)) {
+                    active.add((Transition) t);
+                }
+                getPath(path, active, inactive);
+            }
+            return result;
+        }
+
+        private void getPath(List<Transition> path, List<Transition> active, List<Transition> inactive) {
+            //检查是否所有active都可用
+            boolean allReady = true;
+            for (Transition t : active) {
+                if (!checkReady(t)) {
+                    allReady = false;
+                    break;
+                }
+            }
+            if (!allReady) {
+                return;
+            }
+
+            //检查是否结束
+            if (active.size() == 0 && inactive.size() == 0) {
+                if (!hasPath(path)) {
+                    result.add(path);
+                }
+            }
+
+            for (int i = 0; i < active.size(); i++) {
+                Transition tran = active.get(i);
+                //设置变迁的之后的库所都有令牌
+                List<List<Node>> nextAllActive = new ArrayList<>();
+                for (Node pla : tran.getNext()) {
+                    pla.setTokened(true);
+                    nextAllActive.add(pla.getNext());
+                }
+
+                List<List<Transition>> nextActive = combine(nextAllActive);
+
+                if (nextActive.size() == 0) { //结束
+                    List<Transition> newPath = new ArrayList<>();
+                    newPath.addAll(path);
+                    newPath.add(tran);
+                    active.remove(tran);
+                    tran.setVisitNum(tran.getVisitNum() + 1);
+                    if (active.size() == 0 && inactive.size() == 0) {
+                        if (!hasPath(newPath)) {
+                            result.add(newPath);
+                        }
+                    }
+                    tran.setVisitNum(tran.getVisitNum() - 1);
+                    active.add(i, tran);
+                }
+
+                if (nextActive.size() >= 1) {
+                    for (List<Transition> newActive : nextActive) {
+                        if (newActive.size() > 1) { // 变迁是并发的初始节点
+                            List<Transition> newPath = new ArrayList<>();
+                            newPath.addAll(path);
+                            newPath.add(tran);
+
+                            active.remove(tran);
+                            tran.setVisitNum(tran.getVisitNum() + 1);
+                            active.addAll(newActive);
+
+                            getPath(newPath, active, inactive);
+
+                            active.removeAll(newActive);
+                            tran.setVisitNum(tran.getVisitNum() - 1);
+                            active.add(i, tran);
+
+                        } else if (newActive.size() == 1) {
+                            Transition newActiveNode = newActive.get(0);
+                            if (newActiveNode.getPrev().size() == 1) { //最普通的情况: 一个变迁 --> 一个库所 --> 一个变迁
+                                List<Transition> newPath = new ArrayList<>();
+                                newPath.addAll(path);
+                                newPath.add(tran);
+
+                                active.remove(tran);
+                                tran.setVisitNum(tran.getVisitNum() + 1);
+                                active.addAll(newActive);
+
+                                getPath(newPath, active, inactive);
+
+                                active.removeAll(newActive);
+                                tran.setVisitNum(tran.getVisitNum() - 1);
+                                active.add(i, tran);
+
+                            } else {
+                                inactive.add(tran);
+                                if (allPrevContains(newActiveNode, inactive, active)) { // inactive包含前面的
+                                    Map<Integer, Transition> prevMap = getRemovePrevContained(newActiveNode, inactive);
+
+                                    for (Integer inte : prevMap.keySet()) {
+                                        Transition temp = prevMap.get(inte);
+                                        inactive.remove(temp);
+                                    }
+
+                                    List<Transition> newPath = new ArrayList<>();
+                                    newPath.addAll(path);
+                                    newPath.add(tran);
+
+                                    boolean activeContainsEnd = active.contains(newActiveNode);
+
+                                    active.remove(tran);
+                                    tran.setVisitNum(tran.getVisitNum() + 1);
+                                    if (!activeContainsEnd) {
+                                        active.add(newActiveNode);
+                                    }
+
+                                    getPath(newPath, active, inactive);
+
+                                    if (!activeContainsEnd) {
+                                        active.remove(newActiveNode);
+                                    }
+                                    tran.setVisitNum(tran.getVisitNum() - 1);
+                                    active.add(i, tran);
+
+                                    for (Integer inte : prevMap.keySet()) {
+                                        Transition temp = prevMap.get(inte);
+                                        inactive.add(inte, temp);
+                                    }
+
+                                    inactive.remove(tran);
+
+                                } else { // inactive不完全包含前面的
+                                    inactive.remove(tran);
+
+                                    List<Transition> newPath = new ArrayList<>();
+                                    newPath.addAll(path);
+                                    newPath.add(tran);
+
+                                    active.remove(tran);
+                                    tran.setVisitNum(tran.getVisitNum() + 1);
+                                    inactive.add(tran);
+
+                                    getPath(newPath, active, inactive);
+
+                                    inactive.remove(tran);
+                                    tran.setVisitNum(tran.getVisitNum() - 1);
+                                    active.add(i, tran);
+
+                                }
+                            }
+                        }
+                    }
+
+                    //恢复设置变迁的之后的库所都没有令牌
+                    for (Node pla : tran.getNext()) {
+                        pla.setTokened(false);
+                    }
+                }
+            }
+        }
+
+        private boolean hasPath(List<Transition> path) {
+            for (List<Transition> p : result) {
+                if (p.size() != path.size()) {
+                    continue;
+                }
+                boolean allEqual = true;
+                for (int i = 0; i < p.size(); i++) {
+                    if (!p.get(i).equals(path.get(i))) {
+                        allEqual = false;
+                        break;
+                    }
+                }
+                if (allEqual) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private boolean allPrevContains(Transition end, List<Transition> inactive, List<Transition> active) {
+            if (end.getPrev().size() <= 1) {
+                return true;
+            }
+            for (Node n : end.getPrev()) {
+                int containNum = 0;
+                for (Node t : n.getPrev()) {
+                    if (inactive.contains((Transition) t)) {
+                        containNum += 1;
+                    }
+                }
+                if (containNum != 1 && !active.contains(end)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private Map<Integer, Transition> getRemovePrevContained(Transition end, List<Transition> list) {
+            Map<Integer, Transition> res = new TreeMap<>((k1, k2) -> {
+                return k1.compareTo(k2);
+            });
+            for (Node n : end.getPrev()) {
+                for (Node t : n.getPrev()) {
+                    if (list.contains((Transition) t)) {
+                        res.put(list.indexOf(t), (Transition) t);
+                    }
+                }
+            }
+            return res;
+        }
+
+        private List<List<Transition>> combine(List<List<Node>> all) {
+            List<List<Transition>> result = new ArrayList<>();
+            if (all.size() == 0) {
+                return result;
+            }
+            List<Node> first = all.get(0);
+            all.remove(first);
+            List<List<Transition>> subResult = combine(all);
+            for (Node n : first) {
+                if (subResult.size() > 0) {
+                    for (List<Transition> sub : subResult) {
+                        List<Transition> temp = new ArrayList<>();
+                        temp.add((Transition) n);
+                        temp.addAll(sub);
+                        result.add(temp);
+                    }
+                } else {
+                    List<Transition> temp = new ArrayList<>();
+                    temp.add((Transition) n);
+                    result.add(temp);
+                }
+            }
+
+            return result;
+        }
+
+        private boolean checkReady(Node n) {
+            if (n instanceof Transition) {
+                if (circleNode.contains((Transition) n)) {
+                    if (n.getVisitNum() >= 1) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+    }
+
+    public Graph buildGraph(Net net) {
+        List<Node> nodes = net.getNodes();
+        List<Arc> arcs = net.getArcs();
+        for (Arc arc : arcs) {
+            Node source = arc.getSource();
+            Node target = arc.getTarget();
+            source.addNext(target);
+            target.addPrev(source);
+        }
+        Node start = null;
+        for (Node n : nodes) {
+            if (n.getPrev() == null || n.getPrev().size() == 0) {
+                start = n;
+                break;
+            }
+        }
+        Graph graph = new Graph(start);
+        return graph;
+    }
+
+    public Net loadFile(String fileName) {
+        Net net = null;
+        SAXBuilder sax = new SAXBuilder();
+        Document doc;
+        try {
+            doc = sax.build(new File(fileName));
+            Element pnml = doc.getRootElement();
+            Element netElement = pnml.getChild("net");
+            List<Element> placeElements = netElement.getChildren("place");
+            List<Element> transitionElements = netElement.getChildren("transition");
+            List<Element> arcElements = netElement.getChildren("arc");
+
+            List<Node> nodes = new ArrayList<>();
+            List<Arc> arcs = new ArrayList<>();
+
+            for (Element place : placeElements) {
+                String id = place.getAttributeValue("id");
+                String name = place.getChild("name").getChildTextTrim("text");
+                nodes.add(new Place(id, name));
+            }
+
+            for (Element transition : transitionElements) {
+                String id = transition.getAttributeValue("id");
+                String name = transition.getChild("name").getChildTextTrim("text");
+                nodes.add(new Transition(id, name));
+            }
+
+            for (Element arc : arcElements) {
+                String id = arc.getAttributeValue("id");
+                String sourceId = arc.getAttributeValue("source");
+                String targetId = arc.getAttributeValue("target");
+                Node source = null;
+                Node target = null;
+                for (Node node : nodes) {
+                    if (node.getId().equals(sourceId)) {
+                        source = node;
+                    }
+                    if (node.getId().equals(targetId)) {
+                        target = node;
+                    }
+                    if (source != null && target != null) {
+                        arcs.add(new Arc(id, source, target));
+                        break;
+                    }
+                }
+            }
+
+            net = new Net(nodes, arcs);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return net;
+    }
+
+    public void writeFile(String fileName, List<String> list) {
+        File file = new File(fileName);
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+
+            FileOutputStream out = new FileOutputStream(file, false);
+            StringBuffer sb = new StringBuffer();
+            int i = 0;
+            for (; i < list.size() - 1; i++) {
+                sb.append("CaseID " + (i + 1) + " : " + list.get(i) + "\r\n");
+            }
+            if (list.size() > 0) {
+                sb.append("CaseID " + (i + 1) + " : " + list.get(i));
+            }
+            out.write(sb.toString().getBytes("utf-8"));
+            out.flush();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void getLogOfModel(String modelFile, String logFile) {
+        Net net = loadFile(modelFile);
+        Graph graph = buildGraph(net);
+        List<List<Transition>> paths = graph.getAllPath();
+        List<String> list = new ArrayList<>();
+        StringBuffer sb = new StringBuffer();
+        for (List<Transition> path : paths) {
+            sb.setLength(0);
+            for (Transition n : path) {
+                sb.append(n.getName() + ",");
+            }
+            if (sb.length() > 0) {
+                sb.deleteCharAt(sb.length() - 1);
+            }
+            list.add(sb.toString());
+        }
+        writeFile(logFile, list);
+    }
+
+    public static void main(String[] args0) {
+        new Petri().getLogOfModel("D:/njuse/1学期/高级算法/作业/选题1/lyp2.pnml",
+                "D:/njuse/1学期/高级算法/作业/选题1/lyp2.log");
+    }
+
+}
